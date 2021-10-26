@@ -2,7 +2,7 @@
 
 namespace Model;
 
-class ChampString extends Champ
+class ChampTexte extends Champ
 {
     public function sAjouterValeur($sValeur) : string
     {

@@ -23,10 +23,10 @@ class Champ
         return $this->sColonne;
     }
 
-    public function sAjouterCritere($sNomCritere, $sValeur, $sOperateur = ' = ')
-    {
-        return $sOperateur . $this->sAjouterValeur($sValeur);
-    }
+//    public function sAjouterCritere($sNomCritere, $sValeur, $sOperateur = ' = ')
+//    {
+//        return $sOperateur . $this->sAjouterValeur($sValeur);
+//    }
 
     public function sGetTypeCritere()
     {

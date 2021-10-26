@@ -2,7 +2,7 @@
 
 namespace Model;
 
-class ChampFloat extends Champ
+class ChampFlottant extends Champ
 {
     public function sAjouterValeur($sValeur) : string
     {

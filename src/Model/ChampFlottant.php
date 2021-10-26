@@ -2,12 +2,10 @@
 
 namespace Model;
 
-class ChampInteger extends Champ
+class ChampFlottant extends Champ
 {
-
     public function sAjouterValeur($sValeur) : string
     {
-        return addslashes($sValeur);
+        return str_replace(',', '.', addslashes($sValeur));
     }
-
 }

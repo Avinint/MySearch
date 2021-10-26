@@ -2,7 +2,7 @@
 
 namespace Model;
 
-class CritereDate extends CritereTexte
+class CritereDateTime extends CritereDate
 {
     public function __toString()
     {

@@ -6,15 +6,6 @@ use Model\Cours;
 error_reporting(E_ALL);
 ini_set("display_errors", 1);
 
-//spl_autoload_register(function ($sNomClasse) {
-//
-//
-//        require 'src\\'. $sNomClasse . ".php";
-//
-//
-//
-//});
-
 $oCours = new Cours();
 //$oCours->debug();
 
@@ -25,28 +16,30 @@ $aRecherche = [
         'nIdCours'      => 34,
             'nIdEnseignant' => 164,
             'nIdDisciplineOR'  => 289,
-
-
     ],
 
     'sEtat'          => 'planifie',
     'nIdIntervenant' => 85,
-    'sNomPartielGaucheOR' => 'Guitare',
+    'sNomPartielGauche' => 'Guitare',
     'dCoursDateDebut' => '2020/01/04',
     'dCoursDateFin' => '2020/03/04',
     'dSemestreFinFin' => '2020/12/31',
     'dSemestreFinDebut' => '2019/12/31',
 ];
 
-var_dump($oCours->aGetCriteres($aRecherche));
+//$oCours->aGetCriteres($aRecherche);
 
-doStuff( prenom: "Bruno", nom: "Avinint");
 
-function doStuff($nom, $age = 0, $prenom = "")
-{
-        echo match ($prenom) {
-            'Avinint' => "Il est le bosse",
-            'Yoda' => "Maitre jedi",
-            default => "Cheh !"
-        };
-}
+$oCoursMapping = new \Model\CoursMapping();
+$oEnseignantMapping = new \Model\EnseignantMapping();
+$oCoursMapping->vFusionner($oEnseignantMapping);
+
+
+/**
+ * ASPECTS MANQUANTS
+ * --------------------
+ *
+ *  1) Champs prioritaires dont la présence change la recherche
+ *
+ */
+

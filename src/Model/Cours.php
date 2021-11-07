@@ -7,16 +7,16 @@ class Cours extends Model
 {
     const ALIAS_TABLE = 'COU';
 
-    public function sAjouterCritereSpecifique($sCle, $sValeur)
-    {
-        return $this->sAjouterCritere($sCle, $sValeur);
-    }
-
     /**
      * @return Mapping
      */
-    public function aGetMapping() : Mapping
+    public function oGetMapping() : Mapping
     {
         return new CoursMapping();
+    }
+
+    protected function oGetRecherche()
+    {
+        return new CoursRecherche();
     }
 }

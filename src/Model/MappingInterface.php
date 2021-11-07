@@ -4,5 +4,6 @@ namespace Model;
 
 interface MappingInterface
 {
-    public function getMapping();
+    public function sGetAlias();
+    public function sGetSuffixe();
 }

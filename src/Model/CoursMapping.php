@@ -3,6 +3,11 @@
 namespace Model;
 
 
+use Model\Champ\ChampDate;
+use Model\Champ\ChampFlottant;
+use Model\Champ\ChampNombre;
+use Model\Champ\ChampTexte;
+
 class CoursMapping extends Mapping
 {
 //    public function __set($name, $val) {
@@ -14,13 +19,16 @@ class CoursMapping extends Mapping
         return 'COU';
     }
 
-    protected static $aMappingChamps;
+    public function sGetSuffixe()
+    {
+        return 'Cours';
+    }
 
    public function __construct()
     {
         $aMapping = [
-            'nIdCours' => new ChampNombre('nIdCours', 'id_cours'),
-            'nIdDiscipline'  => new ChampNombre('nIdDiscipline', 'id_discipline'),
+            'nIdCours'       => new ChampNombre('nIdCours', 'id_cours'),
+            'nIdDiscipline'  => new ChampNombre('nIdDiscipline', 'id_discipline' ),
             'nIdEnseignant'  => new ChampNombre('nIdEnseignant', 'id_enseignant'),
             'nIdIntervenant' => new ChampNombre('nIdIntervenant', 'id_intervenant'),
             'sEtat'          => new ChampTexte('sEtat', 'etat'),
@@ -33,5 +41,6 @@ class CoursMapping extends Mapping
         ];
         parent::__construct($aMapping);
     }
+
 
 }

@@ -2,14 +2,17 @@
 
 namespace Model;
 
+use Model\Recherche\Recherche;
+
 abstract class Model
 {
-    protected Recherche $oFormulaireRecherche;
+    protected Recherche $oRecherche;
     protected Mapping $aMappingChamps;
 
     public function __construct()
     {
-        $this->aMappingChamps = $this->aGetMapping();
+        $this->aMappingChamps = $this->oGetMapping();
+        $this->oRecherche = $this->oGetRecherche();
     }
 
     public function debug()
@@ -21,35 +24,28 @@ abstract class Model
     /**
      * @return Mapping
      */
-    abstract public function aGetMapping() : Mapping;
+    abstract public function oGetMapping(): Mapping;
+
+    public function vSetRecherche(Recherche $oRecherche)
+    {
+        $this->oRecherche = $oRecherche;
+    }
 
     /**
      * @throws \Exception
      */
-    public function aGetCriteres($aRecherche)
+    public function szGetCriteresRecherche($aRecherche = [], $sContexte = [])
     {
-        $oRecherche = new RechercheCours();
-        $sRequete = '';
+        $this->oRecherche->vAjouterCriteresRecherche($aRecherche, $sContexte);
 
-//        if ($aRecherche['sNom'] ?? 0 > 0) {
-//            $sRequete .= $oRecherche->vAjouterCritere(new CritereTexte('sNom', $aRecherche['sNom']));
-//            unset($aRecherche['sNom']);
-//        }
-
-        $sChecksum = "XXX";
-
-        if (isset($oRecherche->sCache["XXX"])) {
-            $sRequete = $oRecherche->sCache['XXX'];
-        } else {
-            foreach ($aRecherche as $sCle => $sValeur) {
-                $oCritere = $oRecherche->oGetCritere($sCle, $sValeur);
-                $oRecherche->vAjouterCritere($oCritere);
-                $sRequete .= $oRecherche;
-            }
-        }
-
-        return $sRequete;
+        return $this->oRecherche->sGetTexte();
     }
 
+
+//    protected function oGetRecherche()
+//    {
+//        $cClasse = get_called_class() . 'Recherche';
+//        return new $cClasse();
+//    }
 
 }

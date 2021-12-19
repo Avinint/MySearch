@@ -6,6 +6,7 @@ use DateTime;
 
 class CritereDate extends CritereTexte
 {
+    use TraitDateDefaut;
 //    public function __toString()
 //    {
 //        return parent::__toString() . "$this->sCle $this->sOperateur '$this->sValeur'";
@@ -13,11 +14,15 @@ class CritereDate extends CritereTexte
 
     public function __toString()
     {
-        return $this->sAndOuOr()  . "$this->sCle $this->sOperateur '". addslashes($this->sGetDateFormatUniversel($this->sValeur."")). "'";
+
+        return $this->sAndOuOr()  . "$this->sCle $this->sOperateur '". addslashes($this->sGetDateFormatee($this->sValeur)). "'";
     }
 
-    private function sGetDateFormatUniversel(string $sValeur, string $sFormatRetour = 'Y-m-d')
-    {
-        return (DateTime::createFromFormat('d/m/Y', $sValeur))->format($sFormatRetour);
-    }
+
 }
+
+//$dateTime = '2021-09-10 04:03:40';
+//if (preg_match("/^(\d{4})-(\d{2})-(\d{2}) ([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/", $dateTime, $matches)) {
+//
+//    echo checkdate($matches[2], $matches[3], $matches[1]) ?: "false";
+//}

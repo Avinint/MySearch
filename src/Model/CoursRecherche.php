@@ -4,7 +4,9 @@ namespace Model;
 
 use Model\Recherche\Critere\CritereDate;
 use Model\Recherche\Critere\CritereDateDebut;
+use Model\Recherche\Critere\CritereDateDebutFR;
 use Model\Recherche\Critere\CritereDateFin;
+use Model\Recherche\Critere\CritereDateFinFR;
 use Model\Recherche\Critere\CritereFactory;
 use Model\Recherche\Critere\CritereFlottant;
 use Model\Recherche\Critere\CritereNombre;
@@ -21,13 +23,13 @@ class CoursRecherche extends Recherche
         return 'COU';
     }
 
-    public function __construct()
+    public function __construct($nNesting = 0)
     {
         $this->oMapping = new CoursMapping();
 
-        $this->oCritereFactory = new CritereFactory($this);
+        parent::__construct($nNesting);
 
-        $this->vAjouterDeclencheursCritere('nIdEtudiant', new EtudiantCursusRecherche(),
+        $this->vEnregistrerDeclencheursCritere('nIdEtudiant',
             [
                 'sTag',
                 'sTagPartiel',
@@ -37,7 +39,6 @@ class CoursRecherche extends Recherche
                 'sCodeAnneeEnCours',
                 'nIdCreneau',
                 'nIdDisciplineComplementaire',
-
             ]
         );
 
@@ -70,44 +71,33 @@ class CoursRecherche extends Recherche
 
             'aCritereComposite' => [
                 'aCritereGroupe'  => [ // requete
-                    [ // groupe entre parenthèses()
-                        'AND',
-                        'aCriteres' => [ // criteres
-                            ['nIdCours', CritereNombre::class],
-                            ['nIdEnseignant', CritereNombre::class],
-                            ['nIdDiscipline', 'oCritere' => 'nIdDisciplineOR', 'AND'],
-                        ]
+                    'AND',
+                    'aCriteres' => [ // criteres
+                        ['nIdCours', CritereNombre::class],
+                        ['nIdEnseignant', CritereNombre::class],
+                        ['nIdDiscipline', 'oCritere' => 'nIdDisciplineOR', 'AND'],
                     ]
-
-
                 ]
             ],
 
-
             'ORnIdEnseignantORnIdIntervenant' => [
                 'aCritereGroupe' => [
+                    'OR',
+                    'aCriteres' =>
                     [
-                        'OR',
-                        'aCriteres' =>
-                        [
-                            ['nIdEnseignant',  CritereNombre::class],
-                            ['nIdIntervenant', CritereNombre::class, 'OR']
-                        ]
+                        ['nIdEnseignant',  CritereNombre::class],
+                        ['nIdIntervenant', CritereNombre::class, 'OR']
                     ]
                 ]
-
             ],
 
             'sNomPartielGauche'   => ['sNom', CritereTextePartielDroit::class],
             'sNomPartielGaucheOR' => ['sNom', CritereTextePartielGauche::class, 'OR'],
-            'dCoursDateDebut'     => ['dCoursDate', CritereDateDebut::class],
-            'dCoursDateFin'       => ['dCoursDate', CritereDateFin::class],
-            'dSemestreFinDebut'   => ['dSemestreFin', CritereDateDebut::class],
+            'dCoursDateDebut'     => ['dCoursDate', CritereDateDebutFR::class],
+            'dCoursDateFin'       => ['dCoursDate', CritereDateFinFR::class],
+            'dSemestreFinDebut'   => ['dSemestreFin', CritereDateDebutFR::class],
             'nIdDisciplineOR'     => ['nIdDiscipline', CritereNombre::class, 'OR'],
-            'dSemestreFinFin'     => ['dSemestreFin', CritereDateFin::class],
-
-
-
+            'dSemestreFinFin'     => ['dSemestreFin', CritereDateFinFR::class],
         ]);
     }
 

@@ -7,7 +7,6 @@ use Model\Recherche\Recherche;
 class CritereFactory
 {
     public $oRecherche;
-    public $aListeCritereSpecifique;
 
     public function __construct(Recherche $oRecherche)
     {
@@ -24,7 +23,10 @@ class CritereFactory
      */
     public function oGenererCritere($sCle, $sValeur, $sOperateurLogique = 'AND', $sOperateur = '=')
     {
-        if ($this->oRecherche->bCritereEnregistreExiste($sCle)) {
+        if ($this->oRecherche->bCritereConditionnelExiste($sCle)) {
+            return $this->oGenererCritereConditionnel($sCle, $sValeur, $sOperateur, $sOperateurLogique);
+        }
+        elseif ($this->oRecherche->bCritereEnregistreExiste($sCle)) {
             return $this->oGetCritereEnregistre($sCle, $sValeur, $sOperateur, $sOperateurLogique);
         }
         elseif ($oChamp = $this->oGetChamp($sCle) ?? null) {
@@ -39,7 +41,43 @@ class CritereFactory
                 $sOperateurLogique
             );
         }
+    }
 
+
+    /** Génère un critère à partir des données de la liste des critères enregistrés
+     * @param $sCle
+     * @param $sOperateurLogique
+     * @param $sValeur
+     * @param $sOperateur
+     * @return mixed
+     */
+    public function oGetCritereEnregistre($sCle, $mValeur, $sOperateur, $sOperateurLogique = 'AND' )
+    {
+        if (isset($this->oRecherche->aGetListeCritereEnregistre($sCle) ['aCritereGroupe'])) {
+
+            $aCritereGroupe = $this->oRecherche->aGetListeCritereEnregistre($sCle);
+
+            $bParentheses = $aCritereGroupe['aCritereGroupe']['bParentheses'] ?? true;
+
+            return $this->oGenererCritereGroupe($aCritereGroupe, $mValeur, $bParentheses);
+        }
+
+        [$sCle, $cCritere, $sOperateurLogique] = $this->oRecherche->aGetListeCritereEnregistre($sCle) + [2 => $sOperateurLogique];
+
+//        if (is_a($cCritere, CriterePersonnalise::class, true)) {
+//
+//        }
+
+        return $this->oGetCritere($sCle, $mValeur, $sOperateurLogique, $cCritere);
+    }
+
+    public function oGenererCriterePersonnalise($sCle)
+    {
+        [$sCle, $cCritere] = $this->oRecherche->aGetListeCriterePersonnalise($sCle);
+
+        $oCritere = new $cCritere($sCle, $this->oRecherche->aGetRechercheBrut());
+
+        return $oCritere;
     }
 
     /**
@@ -47,7 +85,7 @@ class CritereFactory
      * @param $sValeur
      * @return CritereGroupe
      */
-    public function oGenererCritereGroupe($sCle, $mValeur): CritereGroupe
+    public function oGenererCritereGroupe($sCle, $mValeurDepart, $bSeul = false): CritereGroupe
     {
         $cClasse = get_class($this->oRecherche);
 
@@ -56,31 +94,37 @@ class CritereFactory
         $oRecherche->nNesting = $this->oRecherche->nNesting + 1;
         $aCriteres = $sCle['aCritereGroupe'];
 
-        $sOperateurLogique = $aCriteres[0][0] ?? 'AND';
-        $oCritere = $this->aGetSousGroupeRecursif($aCriteres, $mValeur);
+        $sOperateurLogique = $aCriteres[0] ?? 'AND';
+        $aCriteres = $aCriteres['aCriteres'];
 
-        $oRecherche->vAjouterCritere($oCritere);
+        foreach ($aCriteres as $nIndex => $aUnCritere) {
+            $mValeur = is_array($mValeurDepart) ? ($mValeurDepart[$nIndex] ?? $mValeurDepart[0]) : $mValeurDepart;
+            if ( isset($aUnCritere['oCritere'])) {
+                $oCritere = $this->oGenererCritere($aUnCritere['oCritere'], $mValeur);
+            } else {
+                [$sCleCritere, $cClasseCritere] = $aUnCritere;
+                $sColonne = $this->oRecherche->sGetColonneAliasee($sCleCritere);
+                $oCritere = new $cClasseCritere($sColonne, $mValeur, $aUnCritere[2] ?? 'AND');
+            }
 
-//        var_dump(new CritereGroupe($sOperateurLogique, $oRecherche)); die();
+            $oRecherche->vAjouterCritere($oCritere);
+        }
+
+       // $oCritere = $this->aGetSousGroupeRecursif($aCriteres, $mValeur, $oRecherche->nNesting);
+
+       // $oRecherche->vAjouterCritere($oCritere);
 
         return new CritereGroupe($sOperateurLogique, $oRecherche);
     }
 
-    private function oGenererCritereConditionnel(array $aCritereConditionnel, $sValeur)
+    public function aGetSousGroupeRecursif($aGroupe, $mValeurBase, $nNesting = 0)
     {
         $cClasse = get_class($this->oRecherche);
-        $oRecherche = new $cClasse();
-
-        foreach ($aCritereConditionnel as $aCritere) {
-            if ()
-        }
-    }
-
-    public function aGetSousGroupeRecursif($aGroupe, $mValeur, $nNesting = 0)
-    {
-        $aRetourGroupe = [];
+        $oRetourGroupe = new $cClasse($nNesting);
+        unset($aGroupe['bParentheses']);
 
         foreach ($aGroupe as $aGroupeCritere) {
+
             if (in_array($aGroupeCritere[0], ['AND', 'OR'])) {
 
                 // je gere un CritereLogique
@@ -89,33 +133,90 @@ class CritereFactory
 
                 $sOperateurLogiqueGroupe = $aGroupeCritere[0];
 
+                $oRecherche = new $cClasse($nNesting);
                 if (isset($aGroupeCritere['aCriteres'])) {
-                    $aCriteres = [];
+
                     foreach ($aGroupeCritere['aCriteres'] as $nPosition => $aUnCritere) {
 
+                        $mValeur = $aUnCritere['sValeur'] ?? $this->sGetValeurCritere($mValeurBase);
+
                         if (isset($aUnCritere['oCritere'])) {
-                           $aCriteres[]  = $this->oGenererCritere($aUnCritere['oCritere'], $this->sGetValeurCritere($mValeur)->current());
-                        } else {
+                            $oRecherche->vAjouterCritere($this->oGenererCritere($aUnCritere['oCritere'], $mValeur));
+                        } elseif (!in_array($aUnCritere[0], ['AND', 'OR'])) {
+
+
                             [$sCleCritere, $cClasseCritere] = $aUnCritere;
+
+
                             $sColonne = $this->oRecherche->sGetColonneAliasee($sCleCritere);
 
-                            $aCriteres[] = new $cClasseCritere($sColonne, $this->sGetValeurCritere($mValeur)->current(), $aUnCritere[2] ?? 'AND');
+                            $oRecherche->vAjouterCritere(new $cClasseCritere($sColonne, $this->oRecherche->aGetRechercheBrut() [$sCleCritere] ??$mValeur, $aUnCritere[2] ?? 'AND'));
                         }
+//                        else {
+//                            $oCritereLogique = $this->aGetSousGroupeRecursif($aUnCritere[1], $this->sGetValeurCritere($mValeurBase), $nNesting);
+//                            $oRecherche->vAjouterCritere($oCritereLogique);
+//                        }
+
                     }
 
-                    $oCritereLogique = new CritereLogique($aCriteres, $sOperateurLogiqueGroupe, $nNesting, count($aGroupe) === 1, $nPosition === 0);
+                    return  new CritereLogique($oRecherche, $sOperateurLogiqueGroupe, $nNesting, count($aGroupe) === 1, $nPosition === 0);
 
-                    $aRetourGroupe[] = $oCritereLogique;
+//                    $oRetourGroupe->vAjouterCritere($oCritereLogique);
 
-                } elseif (isset($aGroupeCritere[1])) {
+                } else {
 
-                    $aRetourGroupe [] = $this->aGetSousGroupeRecursif($aGroupeCritere[1], $this->sGetValeurCritere($mValeur)->current(), $nNesting);
+                    $oCritereLogique = $this->aGetSousGroupeRecursif($aGroupeCritere[1], $this->sGetValeurCritere($mValeurBase), $nNesting);
+                    $oRetourGroupe->vAjouterCritere($oCritereLogique);
                 }
             }
         }
 
+        return new CritereLogique($oRetourGroupe, '', 0, ++$nNesting, true, true);
+    }
 
-        return new CritereLogique($aRetourGroupe, '', 0, ++$nNesting, true, true);
+
+    private function oGenererCritereConditionnel($sCle, $mValeur, $sOperateurLogique, $sOperateur)
+    {
+        $aCritereConditionnel = $this->oRecherche->aGetListeCritereConditionnel($sCle);
+        $aListeCritere = [];
+
+        foreach ($aCritereConditionnel as $aUnCritere) {
+            if (isset($aUnCritere['aCritereGroupe'])) {
+                $bParentheses = $aUnCritere['aCritereGroupe']['bParentheses'] ?? true;
+                $aListeCritere[$aUnCritere['sCondition']] = $this->oGenererCritereGroupe($aUnCritere, $mValeur, $bParentheses);
+            } else {
+                [$cCritere, $sOperateurLogique] = $aUnCritere;
+
+
+//                if (!$cCritere) {
+//                    $oChamp = $this->oGetChamp($sCle);
+//                    $cCritere = $oChamp->sGetTypeCritere();
+//                }
+//
+//                $sColonne = $this->oRecherche->sGetColonneAliasee($sCle);
+//                $aListeCritere[$aUnCritere['sCondition']] = $cCritere($sColonne, $mValeur, $sOperateurLogique);
+                $aListeCritere[$aUnCritere['sCondition']] = $this->oGetCritere($sCle, $mValeur, $sOperateurLogique, $cCritere);
+            }
+
+
+
+//            $critere = $this->oGenererCritere($sCle, $mValeur, $sOperateurLogique, $sOperateur);
+
+        }
+
+        return new CritereConditionnel($sCle, $aListeCritere);
+    }
+
+    private function oGetCritere($sCle, $mValeur, $sOperateurLogique = 'AND', $cCritere = null)
+    {
+        if (!$cCritere) {
+            $oChamp = $this->oGetChamp($sCle);
+            $cCritere = $oChamp->sGetTypeCritere();
+        }
+
+        $sColonne = $this->oRecherche->sGetColonneAliasee($sCle);
+
+        return new $cCritere($sColonne, $mValeur, $sOperateurLogique);
     }
 
     /**
@@ -135,37 +236,6 @@ class CritereFactory
         return new $cCritere($sColonne, $sValeur, $sOperateurLogique, $sOperateur);
     }
 
-    /** Génère un critère à partir des données de la liste des critères enregistrés
-     * @param $sCle
-     * @param $sOperateurLogique
-     * @param $sValeur
-     * @param $sOperateur
-     * @return mixed
-     */
-    public function oGetCritereEnregistre($sCle, $sValeur, $sOperateur, $sOperateurLogique = 'AND' )
-    {
-
-        if (isset($this->oRecherche->aGetListeCritereEnregistre($sCle) ['aCritereGroupe'])) {
-
-            $aCritereGroupe = $this->oRecherche->aGetListeCritereEnregistre($sCle);
-            return $this-> oGenererCritereGroupe($aCritereGroupe, $sValeur);
-        } elseif (isset($this->oRecherche->aGetListeCritereEnregistre($sCle) ['oCritereConditionnel'])) {
-            $aCritere = $this->oRecherche->aGetListeCritereEnregistre($sCle) ['aCritereConditionnel'];
-            return $this-> oGenererCritereConditionnel($aCritere, $sValeur);
-        }
-
-        [$sCle, $cCritere, $sOperateurLogique] = $this->oRecherche->aGetListeCritereEnregistre($sCle) + [2 => $sOperateurLogique];
-
-        if (!$cCritere) {
-            $oChamp = $this->oGetChamp($sCle);
-            $cCritere = $oChamp->sGetTypeCritere();
-        }
-
-        $sColonne = $this->oRecherche->sGetColonneAliasee($sCle);
-
-        return new $cCritere($sColonne, $sValeur, $sOperateurLogique, $sOperateur);
-    }
-
     /**
      * @param $sCle
      * @return false|mixed|null
@@ -181,7 +251,7 @@ class CritereFactory
      * @return mixed
      * @throws \Exception
      */
-    public function sGetValeurCritere(mixed &$mValeur, int|string $nIndex = 0): mixed
+    public function sGenerateurCritere(mixed &$mValeur): mixed
     {
         if (!is_array($mValeur)) {
             $mValeur = [$mValeur];
@@ -198,6 +268,12 @@ class CritereFactory
         yield $mResultat;
 
     }
+
+    public function sGetValeurCritere(&$mValeur)
+    {
+        return $this->sGenerateurCritere($mValeur)->current();
+    }
+
 
 
 

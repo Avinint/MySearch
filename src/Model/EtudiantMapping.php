@@ -26,7 +26,20 @@ class EtudiantMapping extends Mapping
             'sCivilite'             => new ChampTexte('sCivilite', 'civilite_etudiant'),
             'sIdentifiant'          => new ChampTexte('sIdentifiant', 'identifiant'),
             'nArchive'              => new ChampNombre('nArchive', 'archive'),
-            'sTag'                  => new ChampTexte('sTag', 'tag')
+            'sTag'                  => new ChampTexte('sTag', 'tag'),
+
+
+
+            'sValidation' => new ChampTexte('sValidation', 'validation', 'ECGD'),
+
+            'sCodeAnneeEnCours'       => new ChampTexte('sCodeAnneeEnCours', 'code_annee', 'ECG'),
+            'nIdDisciplinePrincipale' => new ChampNombre('nIdDiscipline', 'id_discipline', 'ECGD'),
+            'nIdEnseignant' => new ChampNombre('nIdEnseignant', 'id_enseignant', 'CE'),
+            'dDateFin' => new ChampDate('dDateFin', 'fin', 'CE'),
+            'nIdCreneau' => new ChampNombre('nIdCreneau', '.id_planning_enseignant_discipline_creneau', 'ECGD'),
+            'nIdDisciplineComplementaire' => new ChampNombre('nIdDiscipline', 'id_discipline', 'PED'),
+
+
         ];
         parent::__construct($aMapping);
     }

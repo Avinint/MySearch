@@ -34,7 +34,7 @@ class CritereAnalyseur
         );
 
         if (!isset($oCritere)) {
-            return self::aInfereCritereDate($sCle, $sValeur, $sOperateurLogique, $aPosition, $oMapping);
+          return self::aInfereCritereDate($sCle, $sValeur, $sOperateurLogique, $aPosition, $oMapping);
         }
 
         return $oCritere;
@@ -56,18 +56,16 @@ class CritereAnalyseur
         $sCle = substr($sCle, 0, $nLimite);
         $oChamp = $oMapping[$sCle] ?? null;
 
-        $sTypeCritere = $oChamp->sGetTypeCritere() . $sOperateur;
-
         if (isset($oChamp) && strpos($sCle, $oChamp->sGetNom()) === 0) {
+            $sTypeCritere = $oChamp->sGetTypeCritere() . $sOperateur;
             if ($sTypeCritere) {
                 $sColonne = $oMapping->sGetColonneAliasee($sCle);
                 $oCritere = new $sTypeCritere($sColonne, $sValeur, $sOperateurLogique, $sOperateur);
-            } else {
-                throw new \BadFunctionCallException();
+                return $oCritere;
             }
         }
 
-        return $oCritere;
+        return new CritereInexistant();
     }
 
     /**

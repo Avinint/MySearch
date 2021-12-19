@@ -10,9 +10,10 @@ class CritereGroupe extends Critere implements RechercheCritereInterface
     public $oSousRecherche;
     protected $sOperateurLogique = 'AND';
 
-    public function __construct($sOperateurLogique, RechercheInterface $oRecherche)
+    public function __construct($sOperateurLogique, RechercheInterface $oRecherche, $bParentheses = true)
     {
         $this->oSousRecherche = $oRecherche;
+        $this->bParentheses = $bParentheses;
         $this->sOperateurLogique = $sOperateurLogique;
     }
 
@@ -30,7 +31,8 @@ class CritereGroupe extends Critere implements RechercheCritereInterface
 
     public function __toString()
     {
+        $sTexte = $this->bParentheses ? "($this->oSousRecherche".PHP_EOL.")" : "$this->oSousRecherche".PHP_EOL;
 
-        return $this->sAndOuOr() . "($this->oSousRecherche".PHP_EOL.")";
+        return $this->sAndOuOr() . $sTexte;
     }
 }

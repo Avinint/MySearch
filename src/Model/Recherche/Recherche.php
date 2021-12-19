@@ -3,16 +3,32 @@
 namespace Model\Recherche;
 
 use Model\Mapping;
+use Model\Model;
+use Model\Recherche\Critere\CritereConditionnel;
 use Model\Recherche\Critere\CritereFactory;
+use Model\Recherche\Critere\CritereGroupe;
 use Model\Recherche\Critere\CritereInterface;
+use Model\Recherche\Critere\CritereLogique;
+use Model\Recherche\Critere\CriterePersonnalise;
 
+/**
+ *  Génère une recherche SQL (clause WHERE)
+ *  à partir de critères de recherche brut (type clé valeur)
+ */
 class Recherche implements RechercheInterface
 {
     public $nNesting = 0;
+    /* Permet de connaitre la totalité des critères de la recherche avant la fin du traitement */
+    private $aRechercheBrut = [];
     private $aCriteres = [];
-    private $sTexte ='';
+    private $sTexte  = '';
     protected $oMapping = null;
     public $oCritereFactory;
+    private $aListeCritereStandard = [];
+    protected $aListeCritereConditionnel = [];
+    protected $aListeCritereSpecifique = [];
+
+    private $aListeDeclencheursCondition = [];
     public $aListeDeclencheursCritere = [];
 
     public static $sCache = [];
@@ -23,21 +39,43 @@ class Recherche implements RechercheInterface
      * (Recherches avec champs avec names permettant de savoir qu'on va utiliser des opérateurs
      * comme LIKE, NOT, >, <, etc.
      */
-    protected $aListeCritereSpecifique = [];
 
-    /** Ajoute tous les critères de recherche
+    /** Génération et mise en cache de la recherche si absente du cache
      * @param $aRecherche
      */
     public function vAjouterCriteresRecherche($aRecherche, $sContexte = [])
     {
-        $this->sContexte = $sContexte; // TODO EN FAIRE QUELQUE CHOSE
-        if (!$this->bEnCache($aRecherche)) {
-            foreach ($aRecherche as $sCle => $sValeur) {
-                $oCritere = $this->oCritereFactory->oGenererCritere($sCle, $sValeur);
-                $this->vAjouterCritere($oCritere);
+//        $this->sContexte = $sContexte; // TODO EN FAIRE QUELQUE CHOSE
+        if (!$this->bRecupererCache($aRecherche)) {
+            $this->vGenererRecherche($aRecherche);
+            $this->bGenererCache($aRecherche);
+        }
+    }
+
+    /**
+     * Génération de la recherche
+     * @param $aRecherche
+     */
+    public function vGenererRecherche($aRecherche)
+    {
+        $this->aRechercheBrut = $aRecherche;
+
+        $aRechercheCriterePersonnalise = array_intersect_key($aRecherche, $this->aListeCritereSpecifique);
+
+        foreach ($aRechercheCriterePersonnalise as $sCle => $sValeur) {
+            $oCritere = $this->oCritereFactory->oGenererCriterePersonnalise($sCle);
+            unset ($aRecherche[$sCle]);
+            foreach ($oCritere->aGetCritereRedondant() as $sDeclencheur) {
+                unset($aRecherche[$sDeclencheur]);
             }
 
-            $this->bMettreEnCache($aRecherche);
+            $this->vAjouterCritere($oCritere);
+        }
+
+
+        foreach ($aRecherche as $sCle => $sValeur) {
+            $oCritere = $this->oCritereFactory->oGenererCritere($sCle, $sValeur);
+            $this->vAjouterCritere($oCritere);
         }
     }
 
@@ -60,13 +98,29 @@ class Recherche implements RechercheInterface
     public function vAjouterCritere(CritereInterface $oCritere)
     {
 
+        if ($oCritere instanceof CritereConditionnel) {
+
+            $sCleCondition = array_key_first(array_filter($this->aListeDeclencheursCondition,
+                function ($sCondition) use ($oCritere) {return $sCondition === $oCritere->sCle();}));
+
+            $oCritere->vSetDeclencheur($sCleCondition);
+
+        }
+
         if (empty($this->aCriteres)) {
             $oCritere->vSetOperateurLogique('');
         }
 
-        $this->sTexte .= PHP_EOL . str_repeat(" ", $this->nNesting * 4) . $oCritere;
+       $this->vAjouterTexteCritere($oCritere);
 
         $this->aCriteres[] = $oCritere;
+    }
+
+    public function vAjouterTexteCritere(CritereInterface $oCritere)
+    {
+        $sIndentation = PHP_EOL . str_repeat(" ", $this->nNesting * 4) ;
+        $sEOL = $oCritere instanceof CriterePersonnalise || (string) $oCritere === '' ? '' :  $sIndentation;
+        $this->sTexte .= $sEOL . $oCritere;
     }
 
     /**
@@ -77,17 +131,19 @@ class Recherche implements RechercheInterface
         return $this->aCriteres;
     }
 
-    public function __construct(array $aCriteres = [])
+    public function __construct($nNesting = 0)
     {
+        $this->nNesting = $nNesting ?? null;
+
         $this->oCritereFactory = new CritereFactory($this);
-        $this->vEnregistrerCriteresPrioritaires($aCriteres);
-        $this->vEnregistrerCriteres($aCriteres);
+
     }
 
-    protected function vEnregistrerCriteresPrioritaires(array $aCriteres = [])
-    {
-        $this->aListeCriterePrioritaire[] = $aCriteres;
-    }
+//    protected function vEnregistrerCriteresPrioritaires(array $aCriteres = [])
+//    {
+//        $this->aListeCriterePrioritaire[] = $aCriteres;
+//    }
+
 
     protected function vEnregistrerCriteresConditionnels(array $aCriteres)
     {
@@ -101,22 +157,48 @@ class Recherche implements RechercheInterface
      */
     public function vEnregistrerCriteres(array $aCriteres)
     {
-        $this->aListeCritereSpecifique = $aCriteres;
+        $this->aListeCritereStandard = $this->aListeCritereStandard + $aCriteres;
+    }
+
+    public function vAjouterCriteresPersonnalises(array $aCriteres)
+    {
+        $this->aListeCritereSpecifique = $this->aListeCritereSpecifique + $aCriteres;
     }
 
     public function bCritereEnregistreExiste($sCle)
     {
+        return isset($this->aListeCritereStandard[$sCle]);
+    }
+
+    public function bCritereConditionnelExiste($sCle)
+    {
+        return isset($this->aListeCritereConditionnel[$sCle]);
+    }
+
+    public function bCriterePersonnaliseExiste($sCle)
+    {
         return isset($this->aListeCritereSpecifique[$sCle]);
+    }
+
+    public function aGetListeCritereConditionnel($sCle = null)
+    {
+        return empty($sCle) ?
+            $this->aListeCritereConditionnel :
+            ($this->aListeCritereConditionnel[$sCle] ?? null);
     }
 
     public function aGetListeCritereEnregistre($sCle = null)
     {
-        if (empty($sCle)) {
+        return empty($sCle) ?
+            $this->aListeCritereStandard :
+            ($this->aListeCritereStandard[$sCle] ?? null);
+    }
 
-            return $this->aListeCritereSpecifique;
-        }
-
-        return $this->aListeCritereSpecifique[$sCle] ?? null;
+    public function aGetListeCriterePersonnalise($sCle = null)
+    {
+        return empty($sCle) ?
+            $this->aListeCritereSpecifique :
+            ($this->aListeCritereSpecifique[$sCle] ?? null);
     }
 
     /**
@@ -162,14 +244,23 @@ class Recherche implements RechercheInterface
         return true;
     }
 
-    public function bEnCache($aRecherche)
+    /**
+     * On récupère le texte de la recherche s'il est dans le cache
+     * @param $aRecherche
+     * @return bool
+     */
+    public function bRecupererCache($aRecherche)
     {
         $sTexteEnCache = Recherche::$sCache[serialize($aRecherche)] ?? '';
 
         return !empty($sTexteEnCache) && $this->bSetTexte($sTexteEnCache);
     }
 
-    public function bMettreEnCache($aRecherche)
+    /**
+     * Mise en cache du texte généré
+     * @param $aRecherche
+     */
+    public function bGenererCache($aRecherche)
     {
         self::$sCache[serialize($aRecherche)] = $this->sGetTexte();
     }
@@ -184,9 +275,28 @@ class Recherche implements RechercheInterface
         return $this->oGetMapping()[$sCle] ?? null;
     }
 
-    public function vAjouterDeclencheursCritere(string $sCle, RechercheInterface $oRecherche, array $aListeCriteres)
+    protected function vEnregistrerDeclencheursCritere(string $sCle, array $aListeCriteres)
     {
-        $this->aListeDeclencheursCritere[$sCle] = ['oRecherche' => $oRecherche, $aListeCriteres];
+        $this->aListeDeclencheursCritere[$sCle] = $aListeCriteres;
+    }
 
+    protected function vEnregistrerDeclencheursCondition(string $sCondition, array $aDeclencheurs)
+    {
+        foreach ($aDeclencheurs as $aUnDeclencheur) {
+            $this->aListeDeclencheursCondition[$aUnDeclencheur] = $sCondition;
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public function aGetRechercheBrut(): array
+    {
+        return $this->aRechercheBrut;
+    }
+
+    public function bDansRechercheBrut($sCle)
+    {
+        return isset($this->aRechercheBrut[$sCle]);
     }
 }

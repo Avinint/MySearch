@@ -15,9 +15,6 @@ abstract class Critere implements CritereInterface
         $this->sValeur = $sValeur;
         $this->sOperateur = $sOperateur;
         $this->sOperateurLogique = $sOperateurLogique;
-
-//        var_dump($this->sGetOperateurLogique());
-//        var_dump($sCle);
     }
 
     /**
@@ -49,5 +46,10 @@ abstract class Critere implements CritereInterface
     protected function sEntreGuillemets($sValeur)
     {
         return "'".addslashes($sValeur). "'";
+    }
+
+    public function sCle()
+    {
+        return $this->sCle;
     }
 }

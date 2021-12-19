@@ -19,83 +19,74 @@ class EtudiantCursusRecherche extends Recherche
         $this->oMapping = new EtudiantCursusMapping();
         $this->oCritereFactory = new CritereFactory($this);
 
+        $this->vEnregistrerCriteresConditionnels([
 
-        $this->vEnregistrerCriteres([
-            'nIdEtudiant' => ['nIdEtudiant', CritereSelection::class, 'aCriteresSelection' => []],
-            'sTag' => ['sTag',CritereTexte::class],
-            'sTagPartiel' => ['sTag', CritereTextePartiel::class],
-            'nIdDisciplinePrincipale' => ['nIdDisciplinePrincipale', CritereNombre::class ],
-            'sCodeAnneeEnCours' => ['sCodeAnneeEnCours', CritereTexte::class],
-            'nIdCreneau' => ['nIdCreneau', CritereNombre::class ],
-            'nIdDisciplineComplementaire' => ['nIdDisciplineComplementaire', CritereNombre::class],
-            'nIdEnseignantSession' => ['nIdEnseignant', CritereIdEnseignantSession::class],
-            'nIdEnseignant' => ['nIdEnseignant', new CritereConditionnel(
+            'nIdEnseignant' => [ 'nIdEnseignant',
                 [
-                    [
-                        //  AND (
-                        //      AND
-                        //          (x AND y)
-                        //      OR
-                        //          (n AND m)
-                        //)
+                    //  AND (
+                    //      AND
+                    //          (x AND y)
+                    //      OR
+                    //          (n AND m)
+                    //)
 
-                        // AND ((x AND y) OR (x AND y))
-                        'oCritere' => 'nIdDisciplinePrincipale',
-                        'aCritereGroupe' => [
+                    // AND ((x AND y) OR (x AND y))
+                    'oCritere' => 'nIdDisciplinePrincipale',
+                    'aCritereGroupe' => [
+                        [
+                            'AND',
                             [
-                                'AND',
                                 [
-                                    [
-                                        'OR',
-                                        'aCriteres' =>
+                                    'OR',
+                                    'aCriteres' =>
                                         [
                                             ['nIdEnseignant', CritereNombre::class, 'sAlias' => 'CE'],
                                             ['dDateFin',  CritereDateDebut::class, 'sAlias' => 'CE', 'sValeur' => date('Y-m-d')],
                                         ],
-                                    ],
-                                    [
-                                        'OR',
-                                        'aCriteres' =>
+                                ],
+                                [
+                                    'OR',
+                                    'aCriteres' =>
                                         [
                                             ['nIdEnseignant', CritereNombre::class, 'sAlias' => 'DC'],
                                             ['dDateFin',  CritereDateDebut::class, 'sAlias' => 'DC', 'sValeur' => date('Y-m-d')],
                                         ]
-                                    ]
+                                ]
 
-                                ],
+                            ],
 
-                            ]
                         ]
-                    ],
+                    ]
+                ],
 
-                    [
-                        'oCritere' => 'nIdCreneau',
-                        'aCritereGroupe'  => [
+                [
+                    'oCritere' => 'nIdCreneau',
+                    'aCritereGroupe'  => [
+                        [
+                            'AND',
                             [
                                 'AND',
                                 [
-                                    'AND',
                                     [
-                                        [
-                                            ['nIdEnseignant', CritereNombre::class, 'sAlias' => 'PED'],
-                                            ['dDateFin',  CritereDateDebut::class, 'sAlias' => 'PED', 'sValeur' => date('Y-m-d')],
-                                        ]
-                                    ]
-                                ],
-                                [
-                                    'OR',
-                                    [
-                                        ['nIdEnseignant', CritereNombre::class, 'sAlias' => 'DC'],
-                                        ['dDateFin',  CritereDateDebut::class, 'sAlias' => 'DC', 'sValeur' => date('Y-m-d')],
-                                    ],
-                                ],
-                                [
-                                    'OR',
-                                    [
-                                        ['nIdEnseignant', CritereNombre::class, 'sAlias'],
-                                        ['dDateFin',  CritereDateDebut::class, 'sValeur' => date('Y-m-d')]
+                                        ['nIdEnseignant', CritereNombre::class, 'sAlias' => 'PED'],
+                                        ['dDateFin',  CritereDateDebut::class, 'sAlias' => 'PED', 'sValeur' => date('Y-m-d')],
                                     ]
                                 ]
+                            ],
+                            [
+                                'OR',
+                                [
+                                    ['nIdEnseignant', CritereNombre::class, 'sAlias' => 'DC'],
+                                    ['dDateFin',  CritereDateDebut::class, 'sAlias' => 'DC', 'sValeur' => date('Y-m-d')],
+                                ],
+                            ],
+                            [
+                                'OR',
+                                [
+                                    ['nIdEnseignant', CritereNombre::class, 'sAlias'],
+                                    ['dDateFin',  CritereDateDebut::class, 'sValeur' => date('Y-m-d')]
+                                ]
+                            ]
 
 
                         ]
@@ -108,7 +99,19 @@ class EtudiantCursusRecherche extends Recherche
 //                    ],
 //                    ['oCritere' => 'nIdCreneau'],
 
-                ])],
+            ],
+        ]);
+
+        $this->vEnregistrerCriteres([
+            'nIdEtudiant' => ['nIdEtudiant', CritereSelection::class, 'aCriteresSelection' => []],
+            'sTag' => ['sTag',CritereTexte::class],
+            'sTagPartiel' => ['sTag', CritereTextePartiel::class],
+            'nIdDisciplinePrincipale' => ['nIdDisciplinePrincipale', CritereNombre::class ],
+            'sCodeAnneeEnCours' => ['sCodeAnneeEnCours', CritereTexte::class],
+            'nIdCreneau' => ['nIdCreneau', CritereNombre::class ],
+            'nIdDisciplineComplementaire' => ['nIdDisciplineComplementaire', CritereNombre::class],
+            'nIdEnseignantSession' => ['nIdEnseignant', CritereIdEnseignantSession::class],
+
 
             'nIdEtudiantIN' => [
                 'aCriteres'  => [
